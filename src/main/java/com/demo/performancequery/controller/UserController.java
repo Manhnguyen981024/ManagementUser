@@ -47,6 +47,6 @@ public class UserController {
         Set<RoleDTO> roles = userService.getRolesByUserId(id);
         if (roles == null)
             return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(userService.getRolesByUserId(id));
+        return ResponseEntity.ok(roles);
     }
 }

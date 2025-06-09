@@ -11,6 +11,7 @@ import jakarta.persistence.PersistenceContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,10 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,10 +28,10 @@ import java.util.stream.Collectors;
 @Service
 @AllArgsConstructor
 @Log4j2
-public class UserService  {
+public class UserService {
     private BatchService batchService;
     private UserRepository userRepository;
-//    private RoleRepository roleRepository;
+    private RoleRepository roleRepository;
 
     private final int TOTAL = 1_000_000;
     private final int THREADS = 10;
@@ -50,25 +48,26 @@ public class UserService  {
                 .orElse(null);
     }
 
-    @Transactional(readOnly = true)
+    @Cacheable(value = "userRoles", key = "#userId")
     public Set<RoleDTO> getRolesByUserId(Long userId) {
         return userRepository.findById(userId)
-                .map(u -> new HashSet<>(u.getRoles())
-                        .stream()
-                        .map(r -> new RoleDTO(r.getId(), r.getName()))
-                        .collect(Collectors.toSet()))
+                .map(user -> {
+                    Set<Role> cloned = new HashSet<>(user.getRoles()); // clone để tránh bị concurrent
+                    return cloned.stream()
+                            .map(r -> new RoleDTO(r.getId(), r.getName()))
+                            .collect(Collectors.toSet());
+                })
+                .orElse(Collections.emptySet());
+    }
+
+    public User findUserByEmail(String email) {
+        return userRepository.findByEmail(email)
                 .orElse(null);
     }
 
     public Page<User> getUsersByName(String name, int page, int size, String sortBy) {
-        return userRepository.findUserByNameContaining(name, PageRequest.of(page,size,  Sort.by(sortBy)));
+        return userRepository.findUserByNameContaining(name, PageRequest.of(page, size, Sort.by(sortBy)));
     }
-
-//    public List<Role> getRoles() {
-//
-//    }
-
-
 //    @Override
 //    public void run(String... args) throws Exception {
 //        ExecutorService executor = Executors.newFixedThreadPool(THREADS);
