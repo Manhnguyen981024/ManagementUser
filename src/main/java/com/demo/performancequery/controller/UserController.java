@@ -8,9 +8,8 @@ import com.demo.performancequery.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -43,6 +42,8 @@ public class UserController {
     }
 
     @GetMapping("/users/{id}/roles")
+    @PreAuthorize("hasRole('ROLE_USER')")
+//    @PreAuthorize("#email == principal.username")
     public ResponseEntity<Set<RoleDTO>> getUserRoles(@PathVariable Long id) {
         Set<RoleDTO> roles = userService.getRolesByUserId(id);
         if (roles == null)
